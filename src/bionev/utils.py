@@ -11,10 +11,10 @@ import bionev.OpenNE.graph as og
 import bionev.struc2vec.graph as sg
 
 
-def read_for_OpenNE(filename, weighted=False):
+def read_for_OpenNE(filename, directed, weighted=False):
     G = og.Graph()
     print("Loading training graph for learning embedding...")
-    G.read_edgelist(filename=filename, weighted=weighted)
+    G.read_edgelist(filename=filename, directed=directed, weighted=weighted)
     print("Graph Loaded...")
     return G
 

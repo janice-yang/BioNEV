@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, average_precision_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, average_precision_score, f1_score, roc_auc_score, roc_curve
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 
@@ -75,7 +75,17 @@ def LinkPrediction(embedding_look_up, original_graph, train_graph, test_pos_edge
     print('#' * 9 + ' Link Prediction Performance ' + '#' * 9)
     print(f'AUC-ROC: {auc_roc:.3f}, AUC-PR: {auc_pr:.3f}, Accuracy: {accuracy:.3f}, F1: {f1:.3f}')
     print('#' * 50)
-    return auc_roc, auc_pr, accuracy, f1
+    ##### ADDED: return predictions on all edges (train + test) for inspection #####
+    ##### ADDED: also return fpr, tpr to generate ROC plot
+    train_edges = np.append(np.array(train_graph.edges()), np.array(train_neg_edges), axis = 0)
+    test_edges = np.append(np.array(test_pos_edges), np.array(test_neg_edges), axis = 0)
+    edges = np.append(train_edges, test_edges, axis = 0)
+    all_X = np.append(X_train, X_test, axis = 0)
+    prediction = clf1.predict(all_X)
+    prediction = prediction.reshape(-1, 1)
+    prediction = np.concatenate((edges, prediction), axis = 1)
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    return auc_roc, auc_pr, accuracy, f1, prediction, fpr, tpr
 
 
 def NodeClassification(embedding_look_up, node_list, labels, testing_ratio, seed):

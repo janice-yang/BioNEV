@@ -44,7 +44,9 @@ class GraRep(object):
         W = np.matmul(U, np.power(Sigma, alpha))
         C = np.matmul(VT.T, np.power(Sigma, alpha))
         # print(np.sum(U))
-        embeddings = W + C
+        ##### EDITED: shouldn't embeddings be W, not W + C? Based on algorithm in paper #####
+        #embeddings = W + C
+        embeddings = W
         return embeddings
         # Ud = U[:, 0:self.dim]
         # Sd = S[0:self.dim]

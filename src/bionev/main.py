@@ -9,9 +9,22 @@ import time
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import numpy as np
+import csv
 
 from bionev.embed_train import embedding_training, load_embedding, read_node_labels, split_train_test_graph
 from bionev.evaluation import LinkPrediction, NodeClassification
+
+##### ADDED: function to help with string to boolean conversion from command line #####
+# https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 'True', 't', 'T', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'False', 'f', 'F', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def parse_args():
@@ -70,9 +83,9 @@ def parse_args():
                         help='The label file for node classification')
     parser.add_argument('--negative-ratio', default=5, type=int,
                         help='the negative ratio of LINE')
-    parser.add_argument('--weighted', type=bool, default=False,
+    parser.add_argument('--weighted', type=str2bool, default=False,
                         help='Treat graph as weighted')
-    parser.add_argument('--directed', type=bool, default=False,
+    parser.add_argument('--directed', type=str2bool, default=True,
                         help='Treat graph as directed')
     parser.add_argument('--order', default=2, type=int,
                         help='Choose the order of LINE, 1 means first order, 2 means second order, 3 means first order + second order')
@@ -95,11 +108,11 @@ def parse_args():
     parser.add_argument('--encoder-list', default='[1000, 128]', type=str,
                         help='a list of numbers of the neuron at each encoder layer, the last number is the '
                              'dimension of the output node representation')
-    parser.add_argument('--OPT1', default=True, type=bool,
+    parser.add_argument('--OPT1', default=True, type=str2bool,
                         help='optimization 1 for struc2vec')
-    parser.add_argument('--OPT2', default=True, type=bool,
+    parser.add_argument('--OPT2', default=True, type=str2bool,
                         help='optimization 2 for struc2vec')
-    parser.add_argument('--OPT3', default=True, type=bool,
+    parser.add_argument('--OPT3', default=True, type=str2bool,
                         help='optimization 3 for struc2vec')
     parser.add_argument('--until-layer', type=int, default=6,
                         help='Calculation until the layer. A hyper-parameter for struc2vec.')
@@ -109,6 +122,12 @@ def parse_args():
                         help='gae model selection: gcn_ae or gcn_vae')
     parser.add_argument('--eval-result-file', help='save evaluation performance')
     parser.add_argument('--seed',default=0, type=int,  help='seed value')
+    ##### ADDED: ARGUMENT FOR LINK PREDICTION OUTPUT FILE #####
+    parser.add_argument('--predictions',required=True,
+                        help='Output file with link predictions labeled as 1.')
+    ##### ADDED: ARGUMENT FOR ROC OUTPUT FILE #####
+    parser.add_argument('--roc',required=True,
+                        help='Output file with FPR and TPR arrays for plotting ROC.')
     args = parser.parse_args()
 
     return args
@@ -132,6 +151,7 @@ def main(args):
         eval_time = time.time() - time1
         print('Prediction Task Time: %.2f s' % eval_time)
         os.remove(train_graph_filename)
+        
     elif args.task == 'node-classification':
         if not args.label_file:
             raise ValueError("No input label file. Exit.")
@@ -166,12 +186,16 @@ def main(args):
         )
 
         if args.task == 'link-prediction':
-            auc_roc, auc_pr, accuracy, f1 = result
+            ##### ADDED: variables to store prediction and ROC results
+            auc_roc, auc_pr, accuracy, f1, prediction, fpr, tpr = result
             _results['results'] = dict(
                 auc_roc=auc_roc,
                 auc_pr=auc_pr,
                 accuracy=accuracy,
-                f1=f1,
+                f1=f1
+                #pred=prediction,
+                #fpr=fpr,
+                #tpr=tpr
             )
         else:
             accuracy, f1_micro, f1_macro = result
@@ -184,6 +208,19 @@ def main(args):
         with open(args.eval_result_file, 'a+') as wf:
             print(json.dumps(_results, sort_keys=True), file=wf)
 
+        ##### ADDED: Write predictions to predictions output file #####
+        with open(args.predictions, 'w') as pf:
+            np.savetxt(pf, prediction, fmt = '%s', delimiter = ',')
+        pf.close()
+
+        ##### ADDED: Write FPR and TPR to ROC output file #####
+        fpr = list(fpr)
+        tpr = list(tpr)
+        roc = [fpr, tpr]
+        with open(args.roc, 'w') as rf:
+            writer = csv.writer(rf)
+            writer.writerows(roc)
+        rf.close()
 
 def more_main():
     args = parse_args()

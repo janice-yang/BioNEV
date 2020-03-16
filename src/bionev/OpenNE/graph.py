@@ -40,7 +40,7 @@ class Graph(object):
             self.G[i][j]['weight'] = 1.0
         self.encode_node()
 
-    def read_edgelist(self, filename, weighted=False, directed=False):
+    def read_edgelist(self, filename, directed, weighted=False):
         self.G = nx.DiGraph()
 
         if directed:

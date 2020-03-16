@@ -22,7 +22,7 @@ def embedding_training(args, train_graph_filename):
     elif args.method == 'SVD':
         g = read_for_SVD(train_graph_filename, weighted=args.weighted)
     else:
-        g = read_for_OpenNE(train_graph_filename, weighted=args.weighted)
+        g = read_for_OpenNE(train_graph_filename, directed = args.directed, weighted=args.weighted)
 
     _embedding_training(args, G_=g)
 
